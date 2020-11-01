@@ -1,6 +1,9 @@
+import './Button.scss';
+
 const Button = p => {
+  const className = `button ${p.msg === 'play multi' ? 'button--confirm': 'button--danger' }`
   return (
-    <button onClick={p.setTheBoard}>
+    <button className={className} onClick={p.setTheBoard}>
       {p.msg}
     </button>
   )

@@ -53,7 +53,10 @@ const initState = {
   ],
   board: [],
   oppo: [],
-  errMsg: ''
+  errMsg: '',
+  turn: false,
+  hitCount: 0,
+  myHitCount: 0
 }
 const SET_MULTI = 'SET_MULTI'
 const INIT_BOARD = 'INIT_BOARD';
@@ -64,15 +67,18 @@ const SET_ERR = 'SET_ERR';
 const RESET_ERR = 'RESET_ERR';
 const TAKE_SHOT = 'TAKE_SHOT'
 const SET_SINGLE = 'SET_SINGLE';
+const OPPO_SHOT = 'OPPO_SHOT';
+const RESET = 'RESET';
+const END = 'END';
 
 const reducer = (state, action) => {
 
   switch (action.type) {
     case SET_MULTI:
-      return { ...state, phase: 'SET', mode: 'MULTI' };
+      return { ...state, phase: 'SET', mode: 'MULTI', board: action.generateBoard() };
 
     case SET_SINGLE:
-      return { ...state, phase: 'SET', mode: 'SINGLE' };
+      return { ...state, phase: 'SET', mode: 'SINGLE', turn: true, board: action.generateBoard() };
     case INIT_BOARD: {
       const { board } = action;
       return { ...state, board }
@@ -94,28 +100,33 @@ const reducer = (state, action) => {
     case RESET_ERR:
       return { ...state, errMsg: '' };
     case TAKE_SHOT: {
-      const {coord, hit, copyBoard} = action;
+      const { coord, hit, copyBoard } = action;
       const boardCopy = copyBoard(state.oppo);
       boardCopy[coord[0]][coord[1]] = hit;
-      return { ...state, oppo: boardCopy }
+      return { ...state, oppo: boardCopy, turn: false, hitCount: hit === 'X' ? ++state.hitCount : state.hitCount };
     }
-
+    case OPPO_SHOT: {
+      const { coord, hit, copyBoard } = action
+      const board = copyBoard(state.board);
+      board[coord[0]][coord[1]] = hit;
+      return { ...state, board, turn: true, myhitCount: hit === 'X' ? ++state.myHitCount : state.myHitCount };
+    }
+    case RESET:
+      return initState;
+    case END:
+      return { ...state, phase: END }
     default:
       throw new Error('invalid type: ', action.type)
   }
 }
 
 const useApplicationData = () => {
-  useEffect(() => {
-    const bigArray = generateBoard();
-    dispatch({ type: INIT_BOARD, board: bigArray });
-  }, [])
   const [state, dispatch] = useReducer(reducer, initState);
-  const setTheBoard = () => dispatch({ type: SET_MULTI });
+  const setTheBoard = () => dispatch({ type: SET_MULTI, generateBoard });
   const setSingleBoard = () => {
 
     socket.send(JSON.stringify('SET_AI'));
-    dispatch({ type: SET_SINGLE })
+    dispatch({ type: SET_SINGLE, generateBoard })
   }
 
   useEffect(() => {
@@ -129,14 +140,40 @@ const useApplicationData = () => {
         if (Object.values(res)[0])
           hit = 'X';
 
-
-        dispatch({ type: TAKE_SHOT, coord, hit, copyBoard })
-
-        // dispatch({ type: TAKE_SHOT, res });
+        dispatch({ type: TAKE_SHOT, coord, hit, copyBoard });
+      } else if (res.oppo) {
+        const coord = getCoordFromNodeId(Number(Object.keys(res)[0]))
+        let hit = 'O';
+        if (Object.values(res)[0])
+          hit = 'X';
+        dispatch({ type: OPPO_SHOT, coord, hit, copyBoard })
       }
     })
-    
-  }, [])
+  }, []);
+
+  const reset = () => {
+
+    dispatch({ type: RESET })
+  }
+  useEffect(() => {
+
+    if (state.hitCount === 17) {
+      socket.send(JSON.stringify('WON'))
+      dispatch({ type: END });
+    }
+
+  }, [state.hitCount])
+
+  useEffect(() => {
+    if (state.myHitCount === 17) {
+      dispatch({ type: END });
+    }
+  }, [state.myHitCount])
+  // useEffect(() => {
+  //   if(state.hitCount === 17)
+  //     // dispatch(type: WINNER);
+  // }, [state.hitCount])
+
   const generateBoard = () => {
     const bigArray = [];
     for (let i = 0; i < 10; i++) {
@@ -252,7 +289,7 @@ const useApplicationData = () => {
 
   const battleClickHandler = event => {
     const coord = getCoordFromNodeId(event.target.id);
-    if (!state.oppo[coord[0]][coord[1]]) {
+    if (!state.oppo[coord[0]][coord[1]] && state.turn) {
       socket.send(JSON.stringify(`${coord[0]}${coord[1]}`));
     }
   }
@@ -264,7 +301,8 @@ const useApplicationData = () => {
     nodeOnClick,
     setTheBoard,
     battleClickHandler,
-    setSingleBoard
+    setSingleBoard,
+    reset
   }
 
 }

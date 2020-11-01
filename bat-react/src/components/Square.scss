@@ -1,7 +1,27 @@
+@import "../styles/variables.scss";
+
 .board-node {
   background-color: grey;
   border: 1px solid black;
   height: 100%;
   width: 10%;
+  font: $font-family black 25px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 
+}
+
+.board-node:hover {
+  background-color: rgb(112, 112, 233);
+}
+
+.hit-square {
+  font: 40px black;
+  background-color: $danger-color;
+}
+
+.miss-square {
+  font: 30px black;
+  background-color: $error-color;
 }

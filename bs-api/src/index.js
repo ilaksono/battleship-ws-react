@@ -14,10 +14,10 @@ wss.on("connection", socket => {
   let AI = {}
   const computer = require('./computer')(AI);
   socket.id = count++;
+  socket.winner = false;
   clients.push(socket);
   socket.onmessage = event => {
     const opponentID = (clients.indexOf(socket) + 1) % 2;
-    console.log(opponentID);
     console.log(`Message Received: ${event.data} and has type of ${typeof event.data}`);
     const data = JSON.parse(event.data)
     if (data === 'SET_AI') {
@@ -28,15 +28,18 @@ wss.on("connection", socket => {
       socket.board = data;
     else if (typeof data === 'string') {
       const coord = [Number(data[0]), Number(data[1])];
-      console.log(coord);
       let res = '';
       if (clients.length >= 10) {
         res = clients[opponentID].board[coord[0]][coord[1]];
         return socket.send(JSON.stringify({ [data]: res }));
       } else {
-        console.log(data);
         res = AI.board[coord[0]][coord[1]];
-        return socket.send(JSON.stringify({ [data]: res, shot:true }))
+        socket.send(JSON.stringify({ [data]: res, shot: true }))
+        if(AI.board) {
+          setTimeout(() => {
+            socket.send(JSON.stringify({...computer.takeShotAI(socket.board), oppo:true}));
+          }, 500)
+        }
       }
     }
   };

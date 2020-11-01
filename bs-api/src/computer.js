@@ -57,9 +57,11 @@ module.exports = (AI) => {
         spots: []
       }
     ],
+    candidates: [],
+    shots: []
 
   }
- 
+
 
   const setBoard = () => {
     AI = initAIProps;
@@ -125,7 +127,34 @@ module.exports = (AI) => {
 
   };
 
+  const generateCandidatesAI = (can) => {
+    const canRow = Math.floor(can / 10);
+    const canCol = can % 10;
+    if (canRow + 1 < 10) AI.candidates.push(can + 10);
+    if (canRow - 1 > 0) AI.candidates.push(can - 10);
+    if (canCol + 1 < 10) AI.candidates.push(can + 1);
+    if (canCol - 1 > 0) AI.candidates.push(can - 1);
+    return;
+  };
+  const takeShotAI = (board) => {
+    let can;
+    const opponent = "Player 1";
+    if (AI.candidates.length === 0) can = Math.floor(Math.random() * 100);
+    else if (AI.candidates.length > 0) can = AI.candidates.shift();
+    if (AI.shots.includes(can)) return takeShotAI(board);
+    const coord = [Math.floor(can / 10), can % 10];
+    AI.shots.push(can);
+    console.log(coord, board);
+    if (board[coord[0]][coord[1]])
+      generateCandidatesAI(can);
+    return {[can]: board[coord[0]][coord[1]]};
+  }
+
+  
+
+
   return {
-    setBoard
+    setBoard,
+    takeShotAI
   }
 }
